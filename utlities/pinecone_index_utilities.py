@@ -82,7 +82,7 @@ def _get_data_to_embed(index_name):
 
     return data_to_embed_list
 
-def get_embeddings_for_upsert(index_name):
+def get_embeddings_and_upsert(index_name):
 
     pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
@@ -110,12 +110,14 @@ def get_embeddings_for_upsert(index_name):
                 "values": e["values"],
             })
 
+    # TODO - do I need to check if index exists?
+
     index = pc.Index(index_name)
     # Upsert the records into the index
 
     index.upsert(
         vectors=records,
-        namespace="email-search-full"
+        namespace=index_name
     )
 
 

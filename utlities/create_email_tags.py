@@ -5,11 +5,13 @@ import json
 from directories import IMAGES_FOLDER, IMAGE_TAG_SETS_FOLDER
 from image_prompting import  create_image_tags
 
+# TODO _ implement batch processing
+# https://docs.anthropic.com/en/docs/build-with-claude/batch-processing
 def create_email_tags_dataset(index_name, prompt, tags_to_ignore=[]):
 
     tags_folder_file_name = os.path.join(IMAGE_TAG_SETS_FOLDER, index_name)
     if not os.path.isdir(tags_folder_file_name):
-        os.chdir(tags_folder_file_name)
+        os.mkdir(tags_folder_file_name)
 
     for image_file in os.listdir(IMAGES_FOLDER):
         if ".png" not in image_file:
@@ -27,7 +29,8 @@ def create_email_tags_dataset(index_name, prompt, tags_to_ignore=[]):
                 tags_to_ignore=tags_to_ignore
             )
 
-        except:
+        except Exception as e:
+            print(f'error with {image_file}, {e}')
             continue
 
         print("creating file")
