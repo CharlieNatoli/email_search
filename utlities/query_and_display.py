@@ -34,13 +34,13 @@ def search_email(email_name, index_name, n_emails=4):
     )
 
     results = index.query(
-        namespace="email-search-full",
+        namespace=index_name,
         vector=query_embedding[0].values,
         top_k=n_emails,
         include_values=False,
         include_metadata=False
     )
-    # TODO - get less
+    # TODO - get less 
     most_similar_emails_paths = []
     for m in results['matches']:
         if m['id'] != email_name:

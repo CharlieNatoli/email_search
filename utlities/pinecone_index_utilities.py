@@ -33,6 +33,12 @@ def create_index(index_name):
 
     pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
+    # index = pc.Index(index_name)
+    # delete_response = index.delete(delete_all=True)
+
+
+
+
     embeddings = PineconeEmbeddings(
         model=EMBEDDINGS_MODEL,
         pinecone_api_key=os.environ.get('PINECONE_API_KEY')
@@ -52,6 +58,7 @@ def create_index(index_name):
         # Wait for index to be ready
         while not pc.describe_index(index_name).status['ready']:
             time.sleep(1)
+
 
     # See that it is empty
     print("Index before upsert:")
@@ -110,6 +117,8 @@ def get_embeddings_and_upsert(index_name):
                 "values": e["values"],
             })
 
+    print(records[-1])
+
     # TODO - do I need to check if index exists?
 
     index = pc.Index(index_name)
@@ -120,6 +129,9 @@ def get_embeddings_and_upsert(index_name):
         namespace=index_name
     )
 
+    print("Index after upsert:")
+    print(pc.Index(index_name).describe_index_stats())
+    print("\n")
 
 
 
