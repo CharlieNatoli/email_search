@@ -18,7 +18,7 @@ def get_email_image_path(email_name):
     return os.path.join(IMAGES_FOLDER, email_name + ".png")
 
 
-def search_email(email_name, index_name, n_emails=5):
+def search_email(email_name, index_name, n_emails=4):
     pc = Pinecone(os.getenv('PINECONE_API_KEY'))
     index = pc.Index(index_name)
 
@@ -59,32 +59,26 @@ def get_image_base64_from_path(image_path):
 
 
 def show_emails_html(my_email_path, most_similar_emails_paths, other_emails_title="Most similar emails"):
-
     html_content = f"""
-    <div class="row" style="display: flex; justify-content: space-between;align-items: flex-start;">   
+    <div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">   
         <div style="display: flex; flex-direction: column; align-items: center; width: 25%;">
-
             <h2>Reference email</h2>
-            <div style="height: 600px; overflow: hidden;">
-                <img src="data:image/jpeg;base64,{get_image_base64_from_path(my_email_path)}" style="width:90%;">
+            <div style="width: 90%; height: 600px; overflow: hidden;">
+                <img src="data:image/jpeg;base64,{get_image_base64_from_path(my_email_path)}" style="width: 100%;">
             </div>  
-         </div>  
+        </div>  
         <div style="display: flex; flex-direction: column; align-items: center; width: 75%;">      
             <h2>{other_emails_title}</h2>
-            <div class="row" style="display: flex; justify-content: space-between; width: 75%;align-items: flex-start;"> 
-
-            {''.join(f""" 
-
-            <div style="height: 600px; overflow: hidden;">
-                <img src="data:image/jpeg;base64,{get_image_base64_from_path(path)}" style="width:30%;">
-
-            </div>
-                """ for path in most_similar_emails_paths)
-    }
+            <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
+            {''.join(f"""
+                <div style="width: 30%; height: 600px; overflow: hidden;">
+                    <img src="data:image/jpeg;base64,{get_image_base64_from_path(path)}" style="width: 100%;">
+                </div>
+            """ for path in most_similar_emails_paths)}
             </div>
         </div>
     </div>
-    """
+    # """
 
     return html_content
 
