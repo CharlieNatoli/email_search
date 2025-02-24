@@ -19,8 +19,8 @@ def _pil_image_to_base64(pil_image):
 CLIENT = anthropic.Anthropic()
 
 
-def create_image_tags(image_id, data_extraction_prompt):
-    image_path = os.path.join(IMAGES_FOLDER, image_id + ".png" )
+def create_image_tags(image_file, data_extraction_prompt, tags_to_ignore = []):
+    image_path = os.path.join(IMAGES_FOLDER, image_file)
     image = Image.open(image_path)
 
     message = CLIENT.messages.create(
@@ -44,28 +44,7 @@ def create_image_tags(image_id, data_extraction_prompt):
             }
         ]
     )
-    return json.loads(message.content[0].text)
-
-def create_and_save_image_tags(data_extraction_prompt, index_name, tags_to_ignore = []):
-
-    index_dir_name = os.path.join(IMAGE_TAG_SETS_FOLDER, index_name)
-    if not os.path.isdir(index_dir_name):
-        print(f"creating new directory {index_dir_name}")
-
-    for image_filename in os.listdir(IMAGES_FOLDER)[:2]:
-        if not image_filename.endswith(".png"):
-            continue
-
-        tags_dict = create_image_tags(
-            image_id=image_filename.removesuffix(".png"),
-            data_extraction_prompt=data_extraction_prompt,
-        )
-
-        tags_dict = {key: tags_dict[key] for key in tags_dict.keys() if key not in tags_to_ignore}
-
-        print(tags_dict)
-
-
-
-
+    tags_dict = json.loads(message.content[0].text)
+    tags_dict = {key: tags_dict[key] for key in tags_dict.keys() if key not in tags_to_ignore}
+    return tags_dict
 

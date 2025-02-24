@@ -5,7 +5,7 @@ import json
 from directories import IMAGES_FOLDER, IMAGE_TAG_SETS_FOLDER
 from image_prompting import  create_image_tags
 
-def create_email_tags_dataset(index_name, prompt):
+def create_email_tags_dataset(index_name, prompt, tags_to_ignore=[]):
 
     tags_folder_file_name = os.path.join(IMAGE_TAG_SETS_FOLDER, index_name)
     if not os.path.isdir(tags_folder_file_name):
@@ -21,7 +21,12 @@ def create_email_tags_dataset(index_name, prompt):
             continue
 
         try:
-            email_tags = create_image_tags(image_file, prompt)
+            email_tags = create_image_tags(
+                image_file=image_file,
+                data_extraction_prompt=prompt,
+                tags_to_ignore=tags_to_ignore
+            )
+
         except:
             continue
 
