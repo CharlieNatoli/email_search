@@ -5,14 +5,18 @@ import anthropic
 import os
 import json
 from PIL import Image
+import time
+import re
 from pillow_avif import AvifImagePlugin
+from anthropic.types.messages.batch_create_params import Request
+from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
+from datetime import datetime
 
 from directories import IMAGES_FOLDER, IMAGE_TAG_SETS_FOLDER
 
 
-def _resize_and_crop_image(input_path, target_width=600, max_height=1400):
+def _resize_and_crop_image(img, target_width=600, max_height=1400):
     # Open the image
-    img = Image.open(input_path)
 
     # Calculate aspect ratio
     width, height = img.size
@@ -33,13 +37,12 @@ def _resize_and_crop_image(input_path, target_width=600, max_height=1400):
 
 
 def _image_file_to_base64(image_filename):
-    image_format = image_filename.split(".")[-1]
     image_path = os.path.join(IMAGES_FOLDER, image_filename)
     image = _resize_and_crop_image(Image.open(image_path))
 
     img_buffer = io.BytesIO()
 
-    image.save(img_buffer, format=image_format)
+    image.save(img_buffer, format="PNG")
     img_bytes = img_buffer.getvalue()
     img_base64 = base64.b64encode(img_bytes).decode('utf-8')
     return img_base64
@@ -48,7 +51,8 @@ def _image_file_to_base64(image_filename):
 CLIENT = anthropic.Anthropic()
 
 
-def create_image_tags(image_file, data_extraction_prompt, tags_to_ignore = []):
+
+def create_image_tags_single_image(image_file, data_extraction_prompt, tags_to_ignore = []):
 
 
     message = CLIENT.messages.create(
@@ -75,4 +79,97 @@ def create_image_tags(image_file, data_extraction_prompt, tags_to_ignore = []):
     tags_dict = json.loads(message.content[0].text)
     tags_dict = {key: tags_dict[key] for key in tags_dict.keys() if key not in tags_to_ignore}
     return tags_dict
+
+
+def _name_for_anthropic_id(image_file_name):
+
+    name, ext = os.path.splitext(image_file_name)
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', name)[:60]
+
+# TODO - better way to structure this so its not waiting on all batches to be enerated before sarting to extract?
+# TODO - figure out to hook up anthropic-ized names with query and display stuff
+#  TODO - does tags_to_ignore need to be here, or just in query creation part?
+def create_image_tags_full_dataset(index_name, data_extraction_prompt, tags_to_ignore = [], batch_size=50):
+
+
+    tags_folder_file_name = os.path.join(IMAGE_TAG_SETS_FOLDER, index_name)
+
+    if not os.path.isdir(tags_folder_file_name):
+        os.mkdir(tags_folder_file_name)
+
+    files_already_made = os.listdir(tags_folder_file_name)
+
+
+    image_file_names = os.listdir(IMAGES_FOLDER)
+    image_file_names = [
+        n for n in image_file_names if not n.startswith(".")
+
+    ]
+
+    message_batches = [
+        n for n in image_file_names if
+        _name_for_anthropic_id(n) + ".json" not in files_already_made
+    ]
+
+    print(f"{len(message_batches)} files to create")
+
+    for i in range(0, len(image_file_names), batch_size):
+        image_file_names_batch = image_file_names[i:i + batch_size]
+        print(f'batch starting with image {i}, {datetime.now()}')
+
+
+        requests = [
+            Request(
+                  custom_id= _name_for_anthropic_id(image_file_name),
+                    params=MessageCreateParamsNonStreaming(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=1000,
+                    temperature=0,
+                    system=data_extraction_prompt,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": "image/png",
+                                        "data": _image_file_to_base64(image_file_name),
+                                    },
+                                },
+                            ]
+                        }
+                    ]
+                )
+            )  for image_file_name in image_file_names_batch
+        ]
+
+        message_batch = CLIENT.messages.batches.create(
+            requests=requests
+        )
+
+        message_batches.append(message_batch)
+
+    for batch in message_batches:
+        print(f"checking batch {batch.id}")
+        batch_finished = False
+        while not batch_finished:
+            print("  not finished. Waiting 10 seconds")
+            time.sleep(10)
+            message_batch_status = CLIENT.messages.batches.retrieve(
+                batch.id
+            )
+            print(message_batch_status)
+            batch_finished = message_batch_status.processing_status == "ended"
+
+        print("  finished. Grabbing data")
+        for result in CLIENT.messages.batches.results(
+            batch.id,
+        ):
+            tags_dict = json.loads(result.result.message.content[0].text)
+            tags_dict = {key: tags_dict[key] for key in tags_dict.keys() if key not in tags_to_ignore}
+
+            with open(os.path.join(tags_folder_file_name, result.custom_id + ".json"), 'w') as file:
+                json.dump(tags_dict, file, indent=4)
 
