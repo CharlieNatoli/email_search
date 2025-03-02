@@ -168,9 +168,12 @@ def create_image_tags_full_dataset(index_name, data_extraction_prompt, tags_to_i
         for result in CLIENT.messages.batches.results(
             batch.id,
         ):
-            tags_dict = json.loads(result.result.message.content[0].text)
-            tags_dict = {key: tags_dict[key] for key in tags_dict.keys() if key not in tags_to_ignore}
+            try:
+                tags_dict = json.loads(result.result.message.content[0].text)
+                tags_dict = {key: tags_dict[key] for key in tags_dict.keys() if key not in tags_to_ignore}
 
-            with open(os.path.join(tags_folder_file_name, result.custom_id + ".json"), 'w') as file:
-                json.dump(tags_dict, file, indent=4)
+                with open(os.path.join(tags_folder_file_name, result.custom_id + ".json"), 'w') as file:
+                    json.dump(tags_dict, file, indent=4)
+            except Exception as e:
+                print(e)
 

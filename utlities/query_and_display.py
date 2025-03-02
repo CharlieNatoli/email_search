@@ -15,10 +15,6 @@ def _get_email_tags_str(email_name, index_name):
     return _email_json_to_string(email_metadata_json)
 
 
-# def get_email_image_path(email_name):
-#     return os.path.join(IMAGES_FOLDER, email_name + ".png")
-
-
 def get_email_image_path(email_name):
     # Define possible image extensions to check
     possible_extensions = [

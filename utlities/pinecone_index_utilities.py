@@ -14,12 +14,19 @@ load_dotenv()
 
 EMBEDDINGS_MODEL = 'multilingual-e5-large'
 
+def _join_list_or_return_string(s):
+    if type(s) == str:
+        return ": " + s
+    if type(s) == list:
+        return ":\n - " + "\n - ".join(s)
+    print("unable to reformat ", s)
+    return ""
 
 def _email_json_to_string(email_metadata_json):
     email_tags_str = ""
 
     for k, v in email_metadata_json.items():
-        email_tags_str = email_tags_str + "\n\n" + k + ":\n - " + "\n - ".join(v)
+        email_tags_str = email_tags_str + "\n\n" + k + _join_list_or_return_string(v)
 
     return (email_tags_str)
 
