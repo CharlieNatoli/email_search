@@ -6,11 +6,6 @@ import json
 from langchain_pinecone import PineconeEmbeddings
 from directories import IMAGE_TAG_SETS_FOLDER
 
-from langchain_pinecone import PineconeVectorStore
-
-from langchain_core.documents import Document
-
-
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,12 +28,6 @@ def create_index(index_name):
 
     pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
-    # index = pc.Index(index_name)
-    # delete_response = index.delete(delete_all=True)
-
-
-
-
     embeddings = PineconeEmbeddings(
         model=EMBEDDINGS_MODEL,
         pinecone_api_key=os.environ.get('PINECONE_API_KEY')
@@ -58,7 +47,6 @@ def create_index(index_name):
         # Wait for index to be ready
         while not pc.describe_index(index_name).status['ready']:
             time.sleep(1)
-
 
     # See that it is empty
     print("Index before upsert:")
@@ -117,10 +105,7 @@ def get_embeddings_and_upsert(index_name):
                 "values": e["values"],
             })
 
-    print(records[-1])
-
     # TODO - do I need to check if index exists?
-
     index = pc.Index(index_name)
     # Upsert the records into the index
 

@@ -15,8 +15,28 @@ def _get_email_tags_str(email_name, index_name):
     return _email_json_to_string(email_metadata_json)
 
 
+# def get_email_image_path(email_name):
+#     return os.path.join(IMAGES_FOLDER, email_name + ".png")
+
+
 def get_email_image_path(email_name):
-    return os.path.join(IMAGES_FOLDER, email_name + ".png")
+    # Define possible image extensions to check
+    possible_extensions = [
+        '.png', '.jpg', '.jpeg', '.gif', '.bmp','.avif',
+        '.tiff', '.tif', '.webp', '.svg', '.ico',
+        '.heic', '.heif', '.raw', '.cr2', '.nef',
+        '.arw', '.dng', '.psd', '.ai', '.eps'
+    ]
+
+    # Check which extension exists for this email
+    for ext in possible_extensions:
+        potential_path = os.path.join(IMAGES_FOLDER, email_name + ext)
+        if os.path.exists(potential_path):
+            return potential_path
+
+    # If no matching file is found, return None or raise an exception
+    # Option 1: Return None
+    return None
 
 
 def search_email(email_name, index_name, n_emails=4):
@@ -63,7 +83,7 @@ def _get_embeddings_from_email_path(email_path, index):
     tags_dict_path = os.path.join(
         IMAGE_TAG_SETS_FOLDER,
         index,
-        email_path.split("/")[-1].replace(".png",".json")
+        email_path.split("/")[-1].split(".")[0] + ".json"
     )
 
     with open(tags_dict_path, "r") as f:
@@ -103,7 +123,7 @@ def show_emails_html(my_email_path, most_similar_emails_paths, index_name, other
              
         </div>
     </div> 
-    # """
+    """
 
     return html_content
 

@@ -86,7 +86,7 @@ def _name_for_anthropic_id(image_file_name):
     name, ext = os.path.splitext(image_file_name)
     return re.sub(r'[^a-zA-Z0-9_-]', '_', name)[:60]
 
-# TODO - better way to structure this so its not waiting on all batches to be enerated before sarting to extract?
+# TODO - better way to structure this so its not waiting on all batches to be generated before sarting to extract?
 # TODO - figure out to hook up anthropic-ized names with query and display stuff
 #  TODO - does tags_to_ignore need to be here, or just in query creation part?
 def create_image_tags_full_dataset(index_name, data_extraction_prompt, tags_to_ignore = [], batch_size=50):
@@ -106,13 +106,14 @@ def create_image_tags_full_dataset(index_name, data_extraction_prompt, tags_to_i
 
     ]
 
-    message_batches = [
+    image_file_names = [
         n for n in image_file_names if
         _name_for_anthropic_id(n) + ".json" not in files_already_made
     ]
 
-    print(f"{len(message_batches)} files to create")
+    print(f"{len(image_file_names)} files to create")
 
+    message_batches = []
     for i in range(0, len(image_file_names), batch_size):
         image_file_names_batch = image_file_names[i:i + batch_size]
         print(f'batch starting with image {i}, {datetime.now()}')
