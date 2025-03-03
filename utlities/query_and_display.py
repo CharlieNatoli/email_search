@@ -76,6 +76,7 @@ def get_image_base64_from_path(image_path):
 
 
 def _get_embeddings_from_email_path(email_path, index):
+
     tags_dict_path = os.path.join(
         IMAGE_TAG_SETS_FOLDER,
         index,
@@ -88,7 +89,6 @@ def _get_embeddings_from_email_path(email_path, index):
     return _email_json_to_string(email_metadata_json)
 
 def show_emails_html(my_email_path, most_similar_emails_paths, index_name, other_emails_title="Most similar emails"):
-
 
     html_content = f"""
     <div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">   
@@ -128,5 +128,59 @@ def get_and_show_most_similar_emails_html(my_email_name, index):
     email_path, most_similar_emails_paths = search_email(my_email_name, index)
 
     return show_emails_html(email_path, most_similar_emails_paths, index)
+
+
+def show_emails_html_from_query(similar_emails_paths, index_name, other_emails_title="Most similar emails"):
+    html_content = f"""
+    <div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">   
+        <div style="display: flex; flex-direction: column; align-items: center; width: 95%;">      
+            <h2>{other_emails_title}</h2>
+            <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
+            {''.join(f"""   
+            <div style="width: 20%;">  
+                    <div style="height: 600px; overflow: hidden;">
+                        <img src="data:image/jpeg;base64,{get_image_base64_from_path(path)}" style="width: 100%;">
+
+                    </div>    
+                    <div>
+                    {_get_embeddings_from_email_path(path, index_name).replace("\n", "<br>")}
+                    </div>    
+                </div> 
+            """ for path in similar_emails_paths)}
+            </div>
+
+        </div>
+    </div> 
+    """
+
+    return html_content
+
+
+def get_emails_from_query(email_query, index_name):
+    pc = Pinecone(os.getenv('PINECONE_API_KEY'))
+    index = pc.Index(index_name)
+
+
+    query_embedding = pc.inference.embed(
+        model="multilingual-e5-large",
+        inputs=[email_query],
+        parameters={
+            "input_type": "query"
+        }
+    )
+
+    results = index.query(
+        namespace=index_name,
+        vector=query_embedding[0].values,
+        top_k=6,
+        include_values=False,
+        include_metadata=False
+    )
+    # TODO - get less
+    most_similar_emails_paths = []
+    for m in results['matches']:
+        most_similar_emails_paths.append(get_email_image_path(m['id']))
+
+    return show_emails_html_from_query(most_similar_emails_paths, index_name)
 
 
