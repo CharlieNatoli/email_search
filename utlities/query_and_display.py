@@ -2,20 +2,20 @@ import os
 import json
 import base64
 from pinecone import Pinecone
-import random
+from typing import List, Tuple
 
-from pinecone_index_utilities import _email_json_to_string
+from pinecone_index_utilities import _email_json_to_string, EMBEDDINGS_MODEL
 from directories import IMAGE_TAG_SETS_FOLDER, IMAGES_FOLDER
 
 
-def _get_email_tags_str(email_name, index_name):
+def _get_email_tags_str(email_name: str, index_name: str) -> str:
     with open(os.path.join(IMAGE_TAG_SETS_FOLDER, index_name, email_name + ".json"), "r") as f:
         email_metadata_json = json.load(f)
 
     return _email_json_to_string(email_metadata_json)
 
 
-def get_email_image_path(email_name):
+def get_email_image_path(email_name: str) -> str | None:
     # Define possible image extensions to check
     possible_extensions = [
         '.png', '.jpg', '.jpeg', '.gif', '.bmp','.avif',
@@ -35,7 +35,7 @@ def get_email_image_path(email_name):
     return None
 
 
-def search_email(email_name, index_name, n_emails=4):
+def search_email(email_name: str, index_name: str, n_emails: int=4) -> Tuple[str, List[str]]:
     pc = Pinecone(os.getenv('PINECONE_API_KEY'))
     index = pc.Index(index_name)
 
@@ -65,21 +65,16 @@ def search_email(email_name, index_name, n_emails=4):
 
     return get_email_image_path(email_name), most_similar_emails_paths
 
-def get_random_emails():
-    email_images = os.listdir(IMAGES_FOLDER)
-    email_images = [os.path.join(IMAGES_FOLDER, d) for d in email_images if d.endswith(".png")]
-    return random.sample(email_images, 4)
-
-def get_image_base64_from_path(image_path):
+def get_image_base64_from_path(image_path: str) -> str:
     with open(image_path, 'rb') as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
 
-def _get_embeddings_from_email_path(email_path, index):
+def _get_embeddings_from_email_path(email_path: str, index_name: str) -> str:
 
     tags_dict_path = os.path.join(
         IMAGE_TAG_SETS_FOLDER,
-        index,
+        index_name,
         email_path.split("/")[-1].split(".")[0] + ".json"
     )
 
@@ -88,7 +83,12 @@ def _get_embeddings_from_email_path(email_path, index):
 
     return _email_json_to_string(email_metadata_json)
 
-def show_emails_html(my_email_path, most_similar_emails_paths, index_name, other_emails_title="Most similar emails"):
+# TODO - standardize number of emails
+def show_emails_html(
+        my_email_path: str,
+        most_similar_emails_paths: List[str],
+        index_name: str,
+) -> str:
 
     html_content = f"""
     <div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">   
@@ -102,7 +102,7 @@ def show_emails_html(my_email_path, most_similar_emails_paths, index_name, other
             {_get_embeddings_from_email_path(my_email_path, index_name).replace("\n","<br>")}
             </div>
         <div style="display: flex; flex-direction: column; align-items: center; width: 75%;">      
-            <h2>{other_emails_title}</h2>
+            <h2>Most similar emails</h2>
             <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
             {''.join(f"""   
             <div style="width: 30%;">  
@@ -124,17 +124,20 @@ def show_emails_html(my_email_path, most_similar_emails_paths, index_name, other
     return html_content
 
 
-def get_and_show_most_similar_emails_html(my_email_name, index):
+def get_and_show_most_similar_emails_html(my_email_name: str, index: str) -> str:
     email_path, most_similar_emails_paths = search_email(my_email_name, index)
 
     return show_emails_html(email_path, most_similar_emails_paths, index)
 
 
-def show_emails_html_from_query(similar_emails_paths, index_name, other_emails_title="Most similar emails"):
+def show_emails_html_from_query(
+        similar_emails_paths: List[str],
+        index_name:str
+) -> str:
     html_content = f"""
     <div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">   
         <div style="display: flex; flex-direction: column; align-items: center; width: 95%;">      
-            <h2>{other_emails_title}</h2>
+            <h2>Relevant Emails</h2>
             <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
             {''.join(f"""   
             <div style="width: 20%;">  
@@ -156,13 +159,16 @@ def show_emails_html_from_query(similar_emails_paths, index_name, other_emails_t
     return html_content
 
 
-def get_emails_from_query(email_query, index_name):
+def get_emails_from_query(
+        email_query: str,
+        index_name: str
+) -> str:
     pc = Pinecone(os.getenv('PINECONE_API_KEY'))
     index = pc.Index(index_name)
 
 
     query_embedding = pc.inference.embed(
-        model="multilingual-e5-large",
+        model=EMBEDDINGS_MODEL,
         inputs=[email_query],
         parameters={
             "input_type": "query"

@@ -1,5 +1,6 @@
 
 from pinecone import Pinecone, ServerlessSpec
+from typing import List, Dict
 import time
 import os
 import json
@@ -14,7 +15,7 @@ load_dotenv()
 
 EMBEDDINGS_MODEL = 'multilingual-e5-large'
 
-def _join_list_or_return_string(s):
+def _join_list_or_return_string(s: str | List) -> str:
     if type(s) == str:
         return ": " + s
     if type(s) == list:
@@ -22,7 +23,7 @@ def _join_list_or_return_string(s):
     print("unable to reformat ", s)
     return ""
 
-def _email_json_to_string(email_metadata_json):
+def _email_json_to_string(email_metadata_json: Dict) -> str:
     email_tags_str = ""
 
     for k, v in email_metadata_json.items():
@@ -31,7 +32,7 @@ def _email_json_to_string(email_metadata_json):
     return (email_tags_str)
 
 
-def create_index(index_name):
+def create_index(index_name: str) -> None:
 
     pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
@@ -60,7 +61,7 @@ def create_index(index_name):
     print(pc.Index(index_name).describe_index_stats())
     print("\n")
 
-def _get_data_to_embed(index_name):
+def _get_data_to_embed(index_name: str) -> List[Dict[str, str]]:
 
     email_tags_dir = os.path.join(IMAGE_TAG_SETS_FOLDER, index_name)
 
@@ -84,7 +85,7 @@ def _get_data_to_embed(index_name):
 
     return data_to_embed_list
 
-def get_embeddings_and_upsert(index_name):
+def get_embeddings_and_upsert(index_name: str) -> None:
 
     pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
