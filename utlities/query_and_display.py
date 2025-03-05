@@ -32,7 +32,7 @@ class KeyWordRAGSearchHandler(object):
         return _email_json_to_string(email_metadata_json)
 
     @staticmethod
-    def _get_email_image_path(email_name: str) -> str | None:
+    def _get_email_image_path(email_name: str) -> str:
         # Define possible image extensions to check
         possible_extensions = [
             '.png', '.jpg', '.jpeg', '.gif', '.bmp','.avif',
@@ -49,7 +49,7 @@ class KeyWordRAGSearchHandler(object):
 
         # If no matching file is found, return None or raise an exception
         # Option 1: Return None
-        return None
+        raise Exception(f"No file found for {email_name}")
 
     @staticmethod
     def _get_tags_for_email(email_path: str, index_name: str) -> str:
@@ -82,7 +82,7 @@ class KeyWordRAGSearchHandler(object):
             include_values=False,
             include_metadata=False
         )
-        # TODO - get less
+        
         most_similar_emails = []
         for m in results['matches']:
 
