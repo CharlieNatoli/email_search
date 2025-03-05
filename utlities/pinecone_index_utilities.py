@@ -11,8 +11,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
-
 EMBEDDINGS_MODEL = 'multilingual-e5-large'
 
 def _join_list_or_return_string(s: str | List) -> str:
@@ -113,9 +111,7 @@ def get_embeddings_and_upsert(index_name: str) -> None:
                 "values": e["values"],
             })
 
-    # TODO - do I need to check if index exists?
-    index = pc.Index(index_name)
-    # Upsert the records into the index
+    index = pc.Index(index_name) 
 
     index.upsert(
         vectors=records,

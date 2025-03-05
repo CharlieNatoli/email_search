@@ -45,7 +45,7 @@ def _resize_and_crop_image(
     return resized_img
 
 
-def _image_file_to_base64(image_filename: str) -> str:
+def _image_filename_to_base64(image_filename: str) -> str:
     try:
         image_path = os.path.join(IMAGES_FOLDER, image_filename)
         image = _resize_and_crop_image(Image.open(image_path))
@@ -68,7 +68,7 @@ def _create_tags_dictionary(message : Message, tags_to_ignore: List[str]) -> Dic
     tags_dict = json.loads(message.content[0].text)
     return {key: tags_dict[key] for key in tags_dict.keys() if key not in tags_to_ignore}
 
-def create_image_tags_single_image(image_file, data_extraction_prompt, tags_to_ignore = []):
+def create_image_tags_single_image(image_file, data_extraction_prompt, tags_to_ignore=[]):
 
 
     message = CLIENT.messages.create(
@@ -85,7 +85,7 @@ def create_image_tags_single_image(image_file, data_extraction_prompt, tags_to_i
                         "source": {
                             "type": "base64",
                             "media_type": "image/png",
-                            "data": _image_file_to_base64(image_file),
+                            "data": _image_filename_to_base64(image_file),
                         },
                     },
                 ]
@@ -93,7 +93,7 @@ def create_image_tags_single_image(image_file, data_extraction_prompt, tags_to_i
         ]
     )
 
-    return _create_tags_dictionary(message)
+    return _create_tags_dictionary(message, tags_to_ignore)
 
 def _name_for_anthropic_id(image_file_name):
     ID_CHARATER_LIMIT = 60
@@ -119,7 +119,7 @@ def _create_requests_list(data_extraction_prompt: str, image_file_names_batch: L
                                 "source": {
                                     "type": "base64",
                                     "media_type": "image/png",
-                                    "data": _image_file_to_base64(image_file_name),
+                                    "data": _image_filename_to_base64(image_file_name),
                                 },
                             },
                         ]
