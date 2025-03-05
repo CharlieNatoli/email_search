@@ -90,6 +90,17 @@ def show_emails_html(
         index_name: str,
 ) -> str:
 
+    def inner_photo_div(path, index_name):
+        return f"""
+            <div style="width: 30%;">  
+                    <div style="height: 600px; overflow: hidden;">
+                        <img src="data:image/jpeg;base64,{get_image_base64_from_path(path)}" style="width: 100%;">
+                                  
+                    </div>    
+                    <div>""" + _get_embeddings_from_email_path(path, index_name).replace("\n","<br>") + \
+                """</div>    
+            </div>"""
+
     html_content = f"""
     <div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">   
         <div style="display: flex; flex-direction: column; align-items: center; width: 25%;">
@@ -97,24 +108,13 @@ def show_emails_html(
             <div>
             <div style="width: 90%; height: 600px; overflow: hidden;">
                 <img src="data:image/jpeg;base64,{get_image_base64_from_path(my_email_path)}" style="width: 100%;">
-            </div>   
-        </div>   
-            {_get_embeddings_from_email_path(my_email_path, index_name).replace("\n","<br>")}
-            </div>
+            </div>    
+            <div>""" + _get_embeddings_from_email_path(my_email_path, index_name).replace("\n","<br>") + \
+                """</div>   
         <div style="display: flex; flex-direction: column; align-items: center; width: 75%;">      
             <h2>Most similar emails</h2>
             <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
-            {''.join(f"""   
-            <div style="width: 30%;">  
-                    <div style="height: 600px; overflow: hidden;">
-                        <img src="data:image/jpeg;base64,{get_image_base64_from_path(path)}" style="width: 100%;">
-                                  
-                    </div>    
-                    <div>
-                    {_get_embeddings_from_email_path(path, index_name).replace("\n","<br>")}
-                    </div>    
-                </div> 
-            """ for path in most_similar_emails_paths)}
+            {''.join(inner_photo_div(path, index_name) for path in most_similar_emails_paths)}
             </div>
              
         </div>
@@ -134,24 +134,24 @@ def show_emails_html_from_query(
         similar_emails_paths: List[str],
         index_name:str
 ) -> str:
-    html_content = f"""
-    <div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">   
-        <div style="display: flex; flex-direction: column; align-items: center; width: 95%;">      
-            <h2>Relevant Emails</h2>
-            <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
-            {''.join(f"""   
+    def inner_photo_div(path, index_name):
+        return f"""   
             <div style="width: 20%;">  
                     <div style="height: 600px; overflow: hidden;">
                         <img src="data:image/jpeg;base64,{get_image_base64_from_path(path)}" style="width: 100%;">
 
                     </div>    
-                    <div>
-                    {_get_embeddings_from_email_path(path, index_name).replace("\n", "<br>")}
-                    </div>    
-                </div> 
-            """ for path in similar_emails_paths)}
-            </div>
+                    <div>""" + \
+                    _get_embeddings_from_email_path(path, index_name).replace("\n", "<br>") +\
+                    """</div>    
+                </div> """
 
+    html_content = f"""<div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">   
+        <div style="display: flex; flex-direction: column; align-items: center; width: 95%;">      
+            <h2>Relevant Emails</h2>
+            <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
+            {''.join(inner_photo_div(path, index_name) for path in similar_emails_paths)}
+            </div>
         </div>
     </div> 
     """
