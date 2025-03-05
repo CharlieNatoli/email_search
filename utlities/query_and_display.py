@@ -98,8 +98,8 @@ class EmailDisplayHandler(object):
     @staticmethod
     def _tags_display_component(email: Dict) -> str:
         if email.get("tags"):
-            tags = email["tags"].replace("\n", "<br>")
-            return f"""<div style="font-size:"> {tags} </div> """
+            tags =  email["tags"].replace("\n", "<br>").replace("tags:","Tags used in index:")
+            return f"""<div style="font-size:12px;"> {tags} </div> """
         else:
             return ""
 
