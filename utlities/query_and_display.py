@@ -4,7 +4,7 @@ import base64
 
 from functools import cached_property
 from pinecone import Pinecone
-from typing import List
+from typing import List, Dict
 import math
 from transformers import CLIPProcessor, CLIPModel
 
@@ -52,7 +52,7 @@ class KeyWordRAGSearchHandler(object):
         return None
 
     @staticmethod
-    def _get_embeddings_from_email_path(email_path: str, index_name: str) -> str:
+    def _get_tags_for_email(email_path: str, index_name: str) -> str:
 
         tags_dict_path = os.path.join(
             IMAGE_TAG_SETS_FOLDER,
@@ -66,7 +66,6 @@ class KeyWordRAGSearchHandler(object):
         return _email_json_to_string(email_metadata_json)
 
     def query_index(self, email_query):
-
 
         query_embedding = self.pc.inference.embed(
             model=EMBEDDINGS_MODEL,
@@ -84,30 +83,37 @@ class KeyWordRAGSearchHandler(object):
             include_metadata=False
         )
         # TODO - get less
-        most_similar_emails_paths = []
+        most_similar_emails = []
         for m in results['matches']:
-            most_similar_emails_paths.append(self._get_email_image_path(m['id']))
 
-        return [
-            get_image_base64_from_path(path) for path in most_similar_emails_paths
-    ]
+            image_path = self._get_email_image_path(m['id'])
+            most_similar_emails.append({
+                "image": get_image_base64_from_path(image_path),
+                "tags": self._get_tags_for_email(image_path, self.index_name)
+            })
+
+        return most_similar_emails
 
 class EmailDisplayHandler(object):
 
     @staticmethod
-    def _single_email_display_component(email_image, width_pct):
+    def _tags_display_component(email):
+        if email.get("tags"):
+            tags = email["tags"].replace("\n", "<br>")
+            return f"""<div style="font-size:"> {tags} </div> """
+        else:
+            return ""
+
+    def _single_email_display_component(self, email, width_pct):
 
         return f"""   
             <div style="width: {width_pct}%;">  
                 <div style="height: 600px; overflow: hidden;">
-                    <img src="data:image/jpeg;base64,{email_image}" style="width: 100%;">
-                </div>      
+                    <img src="data:image/jpeg;base64,{email["image"]}" style="width: 100%;">
+                </div>
+                {self._tags_display_component(email)} 
             </div>"""
 
-        # TODO - add back in get embeddings??
-        # < div > """ + \
-        # _get_embeddings_from_email_path(path, index_name).replace("\n", "<br>") +\
-        # """ < / div >
 
     def _emails_row_component(self, email_images):
         width_pct = math.floor(100 / len(email_images))
@@ -116,7 +122,7 @@ class EmailDisplayHandler(object):
                 {''.join(self._single_email_display_component(email_img, width_pct) for email_img in email_images)}
                 </div>"""
 
-    def _emails_row_outer_fix(self, email_images, title):
+    def _emails_row_outer_div(self, email_images, title):
         return f"""<div style="display: flex; flex-direction: column; align-items: center; width: 95%;">    
             <div style="display: flex; flex-direction: column; gap: 20px;">  
                 <h2>{title}</h2> 
@@ -126,13 +132,13 @@ class EmailDisplayHandler(object):
 
     def display_emails_html_from_query(
         self,
-        similar_emails_from_keywords_rag: List[str],
-        similar_emails_from_image_embeddings,
+        emails_from_keywords_rag: List[Dict[str,str]],
+        emails_from_image_embeddings:  List[Dict[str,str]],
     ) -> str:
 
         html_content = f"""  <div style="display: flex; flex-direction: column; gap: 20px;">   
-            {self._emails_row_outer_fix(similar_emails_from_keywords_rag, "Emails found, Keyword RAG Search")}
-            {self._emails_row_outer_fix(similar_emails_from_image_embeddings, "Emails found,  Image embeddings Search")} 
+            {self._emails_row_outer_div(emails_from_keywords_rag, "Emails found, Keyword RAG Search")}
+            {self._emails_row_outer_div(emails_from_image_embeddings, "Emails found,  Image embeddings Search")} 
         </div> 
         """
 
@@ -180,7 +186,7 @@ class ImageEmbeddingsSearchHandler(object):
 
         paths = [os.path.join(IMAGES_FOLDER, m['id']) for m in results['matches']]
         return [
-            get_image_base64_from_path(path) for path in paths
+            {"image": get_image_base64_from_path(path)} for path in paths
         ]
 
 
@@ -189,12 +195,12 @@ def get_emails_from_query(
         index_name: str
 ) -> str:
 
-    similar_emails_from_keywords_rag = KeyWordRAGSearchHandler(index_name).query_index(email_query)
-    similar_emails_from_image_embeddings = ImageEmbeddingsSearchHandler().get_emails_from_image_embeddings(email_query)
+    emails_from_keywords_rag = KeyWordRAGSearchHandler(index_name).query_index(email_query)
+    emails_from_image_embeddings = ImageEmbeddingsSearchHandler().get_emails_from_image_embeddings(email_query)
 
     return EmailDisplayHandler().display_emails_html_from_query(
-        similar_emails_from_keywords_rag=similar_emails_from_keywords_rag,
-        similar_emails_from_image_embeddings=similar_emails_from_image_embeddings,
+        emails_from_keywords_rag=emails_from_keywords_rag,
+        emails_from_image_embeddings=emails_from_image_embeddings,
     )
 
 
