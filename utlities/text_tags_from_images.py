@@ -161,8 +161,8 @@ def _extract_and_save_data_from_batch(batch: MessageBatch, tags_folder_file_path
         try:
             tags_dict = _create_tags_dictionary(result.result.message, tags_to_ignore)
 
-            with open(os.path.join(tags_folder_file_path, result.custom_id + ".json"), 'w') as file:
-                json.dump(tags_dict, file, indent=4)
+            with open(os.path.join(tags_folder_file_path, result.custom_id + ".json"), 'w') as output_file:
+                json.dump(tags_dict, output_file, indent=4)
         except Exception as e:
             print(e)
 
@@ -188,7 +188,7 @@ def create_image_tags_full_dataset(
         index_name: str,
         data_extraction_prompt: str,
         batch_size: int=50,
-        tags_to_ignore=[]
+        tags_to_ignore: List=[]
 ) -> None:
     tags_folder_file_path = os.path.join(IMAGE_TAG_SETS_FOLDER, index_name)
 
