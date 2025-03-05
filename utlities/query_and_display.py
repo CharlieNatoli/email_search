@@ -16,22 +16,25 @@ def get_image_base64_from_path(image_path: str) -> str:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
 
-class KeyWordRAGSearchHandler(object):
+class KeyWordRAGSearchHandler:
 
     def __init__(self, index_name: str):
-        self.pc = Pinecone(os.getenv('PINECONE_API_KEY'))
+
+        api_key = os.getenv('PINECONE_API_KEY')
+        if not api_key:
+            raise ValueError("PINECONE_API_KEY environment variable not set")
+
+        self.pc = Pinecone(api_key)
         self.index_name = index_name
         self.index = self.pc.Index(self.index_name)
-
-
-    def _get_email_tags_str(self, email_name: str) -> str:
-        with open(os.path.join(IMAGE_TAG_SETS_FOLDER, self.index_name, email_name + ".json"), "r") as f:
-            email_metadata_json = json.load(f)
-
-        return _email_json_to_string(email_metadata_json)
+        self.image_tag_sets_folder = os.path.join(IMAGE_TAG_SETS_FOLDER, index_name)
 
     @staticmethod
     def _get_email_image_path(email_name: str) -> str:
+        """
+        Get path corresponding to email name. Email name is distinct, but there are a range of file formats.
+        """
+
         possible_image_extensions = [
             '.png', '.jpg', '.jpeg', '.gif', '.bmp','.avif',
             '.tiff', '.tif', '.webp', '.svg', '.ico',
@@ -46,19 +49,21 @@ class KeyWordRAGSearchHandler(object):
 
         raise Exception(f"No local file found for {email_name}")
 
-    @staticmethod
-    def _get_tags_for_email(email_path: str, index_name: str) -> str:
+    def _get_tags_for_email(self, email_path: str) -> str:
 
         tags_dict_path = os.path.join(
-            IMAGE_TAG_SETS_FOLDER,
-            index_name,
-            email_path.split("/")[-1].split(".")[0] + ".json"
+            self.image_tag_sets_folder,
+            os.path.splitext(os.path.basename(email_path))[0] + ".json"
         )
 
-        with open(tags_dict_path, "r") as f:
-            email_metadata_json = json.load(f)
+        try:
+            with open(tags_dict_path, "r") as f:
+                return _email_json_to_string(json.load(f))
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Metadata file not found for email: {email_path}")
+        except json.JSONDecodeError:
+            raise ValueError(f"Invalid JSON in metadata file for email: {email_path}")
 
-        return _email_json_to_string(email_metadata_json)
 
     def query(self, email_query: str, k: int=5) -> List[Dict]:
 
@@ -79,14 +84,14 @@ class KeyWordRAGSearchHandler(object):
         )
 
         most_similar_emails = []
-        for m in results['matches']:
+        for match in results['matches']:
 
             # Here, we use the filename of the image as the ID in pinecone. That can then be used to grab both
             # the image itself, and the tags, both of which are stored locally.
-            image_path = self._get_email_image_path(m['id'])
+            image_path = self._get_email_image_path(match['id'])
             most_similar_emails.append({
                 "image": get_image_base64_from_path(image_path),
-                "tags": self._get_tags_for_email(image_path, self.index_name)
+                "tags": self._get_tags_for_email(image_path)
             })
 
         return most_similar_emails
@@ -131,12 +136,12 @@ class ImageEmbeddingsSearchHandler(object):
             include_metadata=True
         )
 
-        paths = [os.path.join(IMAGES_FOLDER, m['id']) for m in results['matches']]
+        image_file_paths = [os.path.join(IMAGES_FOLDER, m['id']) for m in results['matches']]
         return [
-            {"image": get_image_base64_from_path(path)} for path in paths
+            {"image": get_image_base64_from_path(image_file_path)} for image_file_path in image_file_paths
         ]
 
-class EmailHTMLDisplayHTMLRenderer(object):
+class EmailHTMLDisplayHTMLRenderer:
 
     @staticmethod
     def _tags_display_component(email: Dict) -> str:
