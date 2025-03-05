@@ -11,7 +11,6 @@ from transformers import CLIPProcessor, CLIPModel
 from pinecone_index_utilities import _email_json_to_string, EMBEDDINGS_MODEL
 from directories import IMAGE_TAG_SETS_FOLDER, IMAGES_FOLDER
 
-# TODO - does this need to be in mixin?
 def get_image_base64_from_path(image_path: str) -> str:
     with open(image_path, 'rb') as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
@@ -19,7 +18,7 @@ def get_image_base64_from_path(image_path: str) -> str:
 
 class KeyWordRAGSearchHandler(object):
 
-    def __init__(self, index_name):
+    def __init__(self, index_name: str):
         self.pc = Pinecone(os.getenv('PINECONE_API_KEY'))
         self.index_name = index_name
         self.index = self.pc.Index(self.index_name)
@@ -65,7 +64,7 @@ class KeyWordRAGSearchHandler(object):
 
         return _email_json_to_string(email_metadata_json)
 
-    def query_index(self, email_query):
+    def query_index(self, email_query: str) -> List[Dict]:
 
         query_embedding = self.pc.inference.embed(
             model=EMBEDDINGS_MODEL,
@@ -82,7 +81,7 @@ class KeyWordRAGSearchHandler(object):
             include_values=False,
             include_metadata=False
         )
-        
+
         most_similar_emails = []
         for m in results['matches']:
 
@@ -97,14 +96,14 @@ class KeyWordRAGSearchHandler(object):
 class EmailDisplayHandler(object):
 
     @staticmethod
-    def _tags_display_component(email):
+    def _tags_display_component(email: Dict) -> str:
         if email.get("tags"):
             tags = email["tags"].replace("\n", "<br>")
             return f"""<div style="font-size:"> {tags} </div> """
         else:
             return ""
 
-    def _single_email_display_component(self, email, width_pct):
+    def _single_email_display_component(self, email: str, width_pct: int) -> str:
 
         return f"""   
             <div style="width: {width_pct}%;">  
@@ -115,7 +114,7 @@ class EmailDisplayHandler(object):
             </div>"""
 
 
-    def _emails_row_component(self, email_images):
+    def _emails_row_component(self, email_images: List[Dict]) -> str:
         width_pct = math.floor(100 / len(email_images))
         return f"""
                 <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
@@ -164,7 +163,7 @@ class ImageEmbeddingsSearchHandler(object):
     def processor(self):
         return CLIPProcessor.from_pretrained(self.CLIP_MODEL)
 
-    def get_emails_from_image_embeddings(self, query_text):
+    def get_emails_from_image_embeddings(self, query_text: str) -> List[Dict]:
 
         # create_text_embeddings_function
         text_embedding = self.processor(
@@ -191,8 +190,8 @@ class ImageEmbeddingsSearchHandler(object):
 
 
 def get_emails_from_query(
-        email_query: str,
-        index_name: str
+    email_query: str,
+    index_name: str
 ) -> str:
 
     emails_from_keywords_rag = KeyWordRAGSearchHandler(index_name).query_index(email_query)
