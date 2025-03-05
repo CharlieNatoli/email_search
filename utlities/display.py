@@ -199,7 +199,7 @@ class EmailHTMLDisplayHTMLRenderer:
 
 
 
-def get_emails_from_query(
+def display_emails_from_query(
     email_query: str,
     keyword_rag_index_name: str,
     clip_index_name: str

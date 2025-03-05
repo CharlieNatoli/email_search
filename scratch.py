@@ -2,7 +2,7 @@ import os
 import shutil
 
 
-from utlities.text_tags_from_images import _name_for_anthropic_id
+from utlities.generate_rag_keywords import _name_for_anthropic_id
 from utlities.directories import IMAGES_FOLDER, PROJECT_BASE_PATH
 
 old_images_dir = os.path.join(PROJECT_BASE_PATH, "example_email_images_OLD_NAMES")
