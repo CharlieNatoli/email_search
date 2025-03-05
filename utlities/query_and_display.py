@@ -3,6 +3,7 @@ import json
 import base64
 from pinecone import Pinecone
 from typing import List, Tuple
+import math
 
 from pinecone_index_utilities import _email_json_to_string, EMBEDDINGS_MODEL
 from directories import IMAGE_TAG_SETS_FOLDER, IMAGES_FOLDER
@@ -83,80 +84,86 @@ def _get_embeddings_from_email_path(email_path: str, index_name: str) -> str:
 
     return _email_json_to_string(email_metadata_json)
 
-# TODO - standardize number of emails
-def show_emails_html(
-        my_email_path: str,
-        most_similar_emails_paths: List[str],
-        index_name: str,
-) -> str:
 
-    def inner_photo_div(path, index_name):
-        return f"""
-            <div style="width: 30%;">  
-                    <div style="height: 600px; overflow: hidden;">
-                        <img src="data:image/jpeg;base64,{get_image_base64_from_path(path)}" style="width: 100%;">
-                                  
-                    </div>    
-                    <div>""" + _get_embeddings_from_email_path(path, index_name).replace("\n","<br>") + \
-                """</div>    
+def _single_email_display_component(email_image, width_pct):
+
+    return f"""   
+        <div style="width: {width_pct}%;">  
+                <div style="height: 600px; overflow: hidden;">
+                    <img src="data:image/jpeg;base64,{email_image}" style="width: 100%;">
+
+                </div>      
+            </div> """
+
+    # TODO - add back in get embeddings??
+    # < div > """ + \
+    # _get_embeddings_from_email_path(path, index_name).replace("\n", "<br>") +\
+    # """ < / div >
+
+def _emails_row_component(email_images):
+    width_pct = math.floor(100 / len(email_images))
+    return f"""
+            <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
+            {''.join(_single_email_display_component(email_img, width_pct) for email_img in email_images)}
             </div>"""
 
-    html_content = f"""
-    <div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">   
-        <div style="display: flex; flex-direction: column; align-items: center; width: 25%;">
-            <h2>Reference email</h2>
-            <div>
-            <div style="width: 90%; height: 600px; overflow: hidden;">
-                <img src="data:image/jpeg;base64,{get_image_base64_from_path(my_email_path)}" style="width: 100%;">
-            </div>    
-            <div>""" + _get_embeddings_from_email_path(my_email_path, index_name).replace("\n","<br>") + \
-                """</div>   
-        <div style="display: flex; flex-direction: column; align-items: center; width: 75%;">      
-            <h2>Most similar emails</h2>
-            <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
-            {''.join(inner_photo_div(path, index_name) for path in most_similar_emails_paths)}
-            </div>
-             
-        </div>
-    </div> 
-    """
+def _emails_row_outer_fix(email_images, title):
+    return f"""<div style="display: flex; flex-direction: column; align-items: center; width: 95%;">    
+        <div style="display: flex; flex-direction: column; gap: 20px;">  
+            <h2>{title}</h2> 
+            {_emails_row_component(email_images)}
+        </div>"""
 
-    return html_content
-
-
-def get_and_show_most_similar_emails_html(my_email_name: str, index: str) -> str:
-    email_path, most_similar_emails_paths = search_email(my_email_name, index)
-
-    return show_emails_html(email_path, most_similar_emails_paths, index)
-
-
+##    "<div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">
 def show_emails_html_from_query(
-        similar_emails_paths: List[str],
-        index_name:str
+        similar_emails_from_keywords_rag: List[str],
+        similar_emails_from_image_embeddings,
 ) -> str:
-    def inner_photo_div(path, index_name):
-        return f"""   
-            <div style="width: 20%;">  
-                    <div style="height: 600px; overflow: hidden;">
-                        <img src="data:image/jpeg;base64,{get_image_base64_from_path(path)}" style="width: 100%;">
 
-                    </div>    
-                    <div>""" + \
-                    _get_embeddings_from_email_path(path, index_name).replace("\n", "<br>") +\
-                    """</div>    
-                </div> """
-
-    html_content = f"""<div class="row" style="display: flex; justify-content: space-between; align-items: flex-start;">   
-        <div style="display: flex; flex-direction: column; align-items: center; width: 95%;">      
-            <h2>Relevant Emails</h2>
-            <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
-            {''.join(inner_photo_div(path, index_name) for path in similar_emails_paths)}
-            </div>
-        </div>
+    html_content = f"""  <div style="display: flex; flex-direction: column; gap: 20px;">   
+        {_emails_row_outer_fix(similar_emails_from_keywords_rag, "Emails found, Keyword RAG Search")}
+        {_emails_row_outer_fix(similar_emails_from_image_embeddings, "Emails found,  Image embeddings Search")} 
     </div> 
     """
 
     return html_content
+
+
+
+def _get_emails_from_image_embeddings(query_text):
+    from transformers import CLIPProcessor, CLIPModel
+
+    # instantiate clip model...
+    pc = Pinecone(os.getenv('PINECONE_API_KEY'))
+    index = pc.Index("clip-email-index")
+
+    model_id = "openai/clip-vit-base-patch32"
+
+    processor = CLIPProcessor.from_pretrained(model_id)
+    model = CLIPModel.from_pretrained(model_id)
+    model.to("cpu")
+
+    # create_text_embeddings_function
+    text_embedding = processor(text=query_text,
+                               padding=True,
+                               images=None,
+                               return_tensors='pt').to("cpu")
+
+    text_emb = model.get_text_features(**text_embedding)[0].tolist()
+
+
+
+    results = index.query(
+        namespace="ns1",
+        vector=text_emb,
+        top_k=5,
+        include_values=False,
+        include_metadata=True
+    )
+
+    return [
+        os.path.join(IMAGES_FOLDER, m['id']) for m in results['matches']
+    ]
 
 
 def get_emails_from_query(
@@ -178,7 +185,7 @@ def get_emails_from_query(
     results = index.query(
         namespace=index_name,
         vector=query_embedding[0].values,
-        top_k=6,
+        top_k=5,
         include_values=False,
         include_metadata=False
     )
@@ -187,6 +194,20 @@ def get_emails_from_query(
     for m in results['matches']:
         most_similar_emails_paths.append(get_email_image_path(m['id']))
 
-    return show_emails_html_from_query(most_similar_emails_paths, index_name)
+    similar_emails_from_keywords_rag = [
+        get_image_base64_from_path(path) for path in most_similar_emails_paths
+    ]
+
+    similar_emails_from_image_embeddings_paths = _get_emails_from_image_embeddings(email_query)
+
+
+    similar_emails_from_image_embeddings = [
+        get_image_base64_from_path(path) for path in similar_emails_from_image_embeddings_paths
+    ]
+
+    return show_emails_html_from_query(
+        similar_emails_from_keywords_rag=similar_emails_from_keywords_rag,
+        similar_emails_from_image_embeddings=similar_emails_from_image_embeddings,
+    )
 
 
