@@ -32,23 +32,19 @@ class KeyWordRAGSearchHandler(object):
 
     @staticmethod
     def _get_email_image_path(email_name: str) -> str:
-        # Define possible image extensions to check
-        possible_extensions = [
+        possible_image_extensions = [
             '.png', '.jpg', '.jpeg', '.gif', '.bmp','.avif',
             '.tiff', '.tif', '.webp', '.svg', '.ico',
             '.heic', '.heif', '.raw', '.cr2', '.nef',
             '.arw', '.dng', '.psd', '.ai', '.eps'
         ]
 
-        # Check which extension exists for this email
-        for ext in possible_extensions:
+        for ext in possible_image_extensions:
             potential_path = os.path.join(IMAGES_FOLDER, email_name + ext)
             if os.path.exists(potential_path):
                 return potential_path
 
-        # If no matching file is found, return None or raise an exception
-        # Option 1: Return None
-        raise Exception(f"No file found for {email_name}")
+        raise Exception(f"No local file found for {email_name}")
 
     @staticmethod
     def _get_tags_for_email(email_path: str, index_name: str) -> str:
@@ -64,7 +60,7 @@ class KeyWordRAGSearchHandler(object):
 
         return _email_json_to_string(email_metadata_json)
 
-    def query_index(self, email_query: str) -> List[Dict]:
+    def query(self, email_query: str, k: int=5) -> List[Dict]:
 
         query_embedding = self.pc.inference.embed(
             model=EMBEDDINGS_MODEL,
@@ -77,7 +73,7 @@ class KeyWordRAGSearchHandler(object):
         results = self.index.query(
             namespace=self.index_name,
             vector=query_embedding[0].values,
-            top_k=5,
+            top_k=k,
             include_values=False,
             include_metadata=False
         )
@@ -85,6 +81,8 @@ class KeyWordRAGSearchHandler(object):
         most_similar_emails = []
         for m in results['matches']:
 
+            # Here, we use the filename of the image as the ID in pinecone. That can then be used to grab both
+            # the image itself, and the tags, both of which are stored locally.
             image_path = self._get_email_image_path(m['id'])
             most_similar_emails.append({
                 "image": get_image_base64_from_path(image_path),
@@ -93,7 +91,52 @@ class KeyWordRAGSearchHandler(object):
 
         return most_similar_emails
 
-class EmailDisplayHandler(object):
+class ImageEmbeddingsSearchHandler(object):
+
+    # DEFAULT_INDEX_NAME = "clip-email-index"
+    CLIP_MODEL =  "openai/clip-vit-base-patch32"
+    CLIP_INDEX_NAMESPACE = "ns1"
+
+    def __init__(self, index_name):
+        self.pc = Pinecone(os.getenv('PINECONE_API_KEY'))
+        self.index_name = index_name
+        self.index = self.pc.Index(self.index_name)
+
+    @cached_property
+    def _model(self):
+        model = CLIPModel.from_pretrained(self.CLIP_MODEL)
+        model.to("cpu")
+        return model
+
+    @cached_property
+    def _processor(self):
+        return CLIPProcessor.from_pretrained(self.CLIP_MODEL)
+
+    def query(self, query_text: str) -> List[Dict]:
+
+        text_embedding = self._processor(
+            text=query_text,
+            padding=True,
+            images=None,
+            return_tensors='pt'
+        ).to("cpu")
+
+        text_emb = self._model.get_text_features(**text_embedding)[0].tolist()
+
+        results = self.index.query(
+            namespace=self.CLIP_INDEX_NAMESPACE,
+            vector=text_emb,
+            top_k=5,
+            include_values=False,
+            include_metadata=True
+        )
+
+        paths = [os.path.join(IMAGES_FOLDER, m['id']) for m in results['matches']]
+        return [
+            {"image": get_image_base64_from_path(path)} for path in paths
+        ]
+
+class EmailHTMLDisplayHTMLRenderer(object):
 
     @staticmethod
     def _tags_display_component(email: Dict) -> str:
@@ -103,13 +146,19 @@ class EmailDisplayHandler(object):
         else:
             return ""
 
-    def _single_email_display_component(self, email: str, width_pct: int) -> str:
-
-        return f"""   
-            <div style="width: {width_pct}%;">  
+    @staticmethod
+    def _email_display_component(email: Dict) -> str:
+        return f"""
                 <div style="height: 600px; overflow: hidden;">
                     <img src="data:image/jpeg;base64,{email["image"]}" style="width: 100%;">
-                </div>
+                </div>"""
+
+
+    def _single_email_display_wrapper(self, email: Dict, width_pct: int) -> str:
+
+        return f"""   
+            <div style="width: {width_pct}%;">   
+                {self._email_display_component(email)}
                 {self._tags_display_component(email)} 
             </div>"""
 
@@ -118,7 +167,7 @@ class EmailDisplayHandler(object):
         width_pct = math.floor(100 / len(email_images))
         return f"""
                 <div class="row" style="display: flex; flex-wrap: wrap; justify-content: space-between; width: 100%; align-items: flex-start;"> 
-                {''.join(self._single_email_display_component(email_img, width_pct) for email_img in email_images)}
+                {''.join(self._single_email_display_wrapper(email_img, width_pct) for email_img in email_images)}
                 </div>"""
 
     def _emails_row_outer_div(self, email_images, title):
@@ -144,60 +193,18 @@ class EmailDisplayHandler(object):
         return html_content
 
 
-class ImageEmbeddingsSearchHandler(object):
-
-    INDEX_NAME = "clip-email-index"
-    CLIP_MODEL =  "openai/clip-vit-base-patch32"
-
-    def __init__(self):
-        self.pc = Pinecone(os.getenv('PINECONE_API_KEY'))
-        self.index = self.pc.Index(self.INDEX_NAME)
-
-    @cached_property
-    def model(self):
-        model = CLIPModel.from_pretrained(self.CLIP_MODEL)
-        model.to("cpu")
-        return model
-
-    @cached_property
-    def processor(self):
-        return CLIPProcessor.from_pretrained(self.CLIP_MODEL)
-
-    def get_emails_from_image_embeddings(self, query_text: str) -> List[Dict]:
-
-        # create_text_embeddings_function
-        text_embedding = self.processor(
-            text=query_text,
-            padding=True,
-            images=None,
-            return_tensors='pt'
-        ).to("cpu")
-
-        text_emb = self.model.get_text_features(**text_embedding)[0].tolist()
-
-        results = self.index.query(
-            namespace="ns1",
-            vector=text_emb,
-            top_k=5,
-            include_values=False,
-            include_metadata=True
-        )
-
-        paths = [os.path.join(IMAGES_FOLDER, m['id']) for m in results['matches']]
-        return [
-            {"image": get_image_base64_from_path(path)} for path in paths
-        ]
-
 
 def get_emails_from_query(
     email_query: str,
-    index_name: str
+    keyword_rag_index_name: str,
+    clip_index_name: str
 ) -> str:
 
-    emails_from_keywords_rag = KeyWordRAGSearchHandler(index_name).query_index(email_query)
-    emails_from_image_embeddings = ImageEmbeddingsSearchHandler().get_emails_from_image_embeddings(email_query)
 
-    return EmailDisplayHandler().display_emails_html_from_query(
+    emails_from_keywords_rag = KeyWordRAGSearchHandler(keyword_rag_index_name).query(email_query)
+    emails_from_image_embeddings = ImageEmbeddingsSearchHandler(clip_index_name).query(email_query)
+
+    return EmailHTMLDisplayHTMLRenderer().display_emails_html_from_query(
         emails_from_keywords_rag=emails_from_keywords_rag,
         emails_from_image_embeddings=emails_from_image_embeddings,
     )
