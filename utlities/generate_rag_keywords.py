@@ -6,7 +6,7 @@ import os
 import json
 from typing import List, Dict
 from PIL import Image
-import retry
+from tenacity import retry, stop_after_attempt, retry_if_result, wait_exponential
 import re
 from pillow_avif import AvifImagePlugin
 from anthropic.types.messages.batch_create_params import Request
@@ -111,19 +111,28 @@ class SingleImagePromptHandler(BaseAnthropicPromptMixin):
 
         return self._create_tags_dictionary(message, tags_to_ignore)
 
+class BatchNotReadyException(Exception):
+    pass
+
 class KeywordRAGIndexCreator(BaseAnthropicPromptMixin):
 
     BATCH_SIZE = 50
 
-    def __init__(self, index_name):
+    def __init__(self, index_name, data_extraction_prompt, tags_to_ignore: List[str] = None):
+
+
         super().__init__()
         self.index_name = index_name
         self.tags_folder_file_path = os.path.join(IMAGE_TAG_SETS_FOLDER, self.index_name)
+        self.data_extraction_prompt = data_extraction_prompt
+
+        if tags_to_ignore is None:
+            tags_to_ignore = []
+        self.tags_to_ignore = tags_to_ignore
 
         # assumed that all files here are images
         self.image_file_names = [
             image_file_name for image_file_name in os.listdir(IMAGES_FOLDER) if not image_file_name.startswith(".")
-
         ]
 
     @staticmethod
@@ -131,11 +140,11 @@ class KeywordRAGIndexCreator(BaseAnthropicPromptMixin):
         # IDs for batch items in Anthropic must be no longer than 64 characters
         # and must not use special characters other than "-" and "_"
         # Filenames are used as IDs, but must conform to these requirements (assumed all filenames are unique)
-        ID_CHARATER_LIMIT = 60
+        id_character_limit = 64
         name, ext = os.path.splitext(image_file_name)
-        return re.sub(r'[^a-zA-Z0-9_-]', '_', name)[:ID_CHARATER_LIMIT]
+        return re.sub(r'[^a-zA-Z0-9_-]', '_', name)[:id_character_limit]
 
-    def _create_requests_list(self, data_extraction_prompt: str, image_file_names_batch: List[str]) -> List[Request]:
+    def _create_requests_list(self, image_file_names_batch: List[str]) -> List[Request]:
         requests = []
 
         for image_file_name in image_file_names_batch:
@@ -151,7 +160,7 @@ class KeywordRAGIndexCreator(BaseAnthropicPromptMixin):
                         custom_id=self._name_for_anthropic_id(image_file_name),
                         params=MessageCreateParamsNonStreaming(
                             **self.claude_config,
-                            system=data_extraction_prompt,
+                            system=self.data_extraction_prompt,
                             messages=[{
                                 "role": "user",
                                 "content": [{
@@ -175,16 +184,12 @@ class KeywordRAGIndexCreator(BaseAnthropicPromptMixin):
         if not os.path.isdir(self.tags_folder_file_path):
             os.mkdir(self.tags_folder_file_path)
 
-    def _create_batches_in_anthropic(
-            self,
-            data_extraction_prompt: str
-    ):
+    def _create_batches_in_anthropic(self):
         message_batches = []
         for i in range(0, len(self.image_file_names ), self.BATCH_SIZE):
             print(f'batch starting with image {i}, {datetime.now()}')
             message_batch = self.CLIENT.messages.batches.create(
                 requests=self._create_requests_list(
-                    data_extraction_prompt=data_extraction_prompt,
                     image_file_names_batch=self.image_file_names [i:i +  self.BATCH_SIZE]
                 )
             )
@@ -192,63 +197,54 @@ class KeywordRAGIndexCreator(BaseAnthropicPromptMixin):
             message_batches.append(message_batch)
         return message_batches
 
-    @retry.retry(
-        retry_on_result=lambda result: result != "ended",
-        tries=10,
-        delay=5,
-        backoff=2,
-        max_delay=300
-    )
-    def _check_batch_status(self, batch: MessageBatch) -> None:
+    @staticmethod
+    def _batch_status_not_complete(message_batch):
+        return message_batch.processing_status != "ended"
+
+    @retry(wait=wait_exponential(multiplier=1, min=2, max=300),
+            stop=stop_after_attempt(5),
+           retry=retry_if_result(_batch_status_not_complete))
+    def _check_batch_status(self, batch: MessageBatch) -> MessageBatch:
         message_batch = self.CLIENT.messages.batches.retrieve(batch.id)
 
         status = message_batch.processing_status
         print(f"Batch {batch.id} status: {status}")
-        return status
+        return message_batch
 
     def _wait_for_batch_to_finish(self, batch: MessageBatch) -> bool:
         print(f"Waiting for batch {batch.id}")
 
         # Keep trying until batch is complete
-        final_status = self._check_batch_status(batch)
-        if final_status == "ended":
+        try:
+            self._check_batch_status(batch)
             print(f"Batch {batch.id} finished successfully. Grabbing data.")
             return True
-        else:
-            print(f"Batch {batch.id} ended with status: {final_status}. Unable to process images.")
+        except Exception as e:
+            print(f"Batch {batch.id} ended without completion. Unable to process images.")
             return False
 
-    def _extract_and_save_data_from_batch(self, batch: MessageBatch, tags_to_ignore: List[str] = None) -> Dict:
-        if tags_to_ignore is None:
-            tags_to_ignore = []
+    def _extract_and_save_data_from_batch(self, batch: MessageBatch) -> Dict:
 
         for result in self.CLIENT.messages.batches.results(
                 batch.id,
         ):
             try:
-                tags_dict = self._create_tags_dictionary(result.result.message, tags_to_ignore)
+                tags_dict = self._create_tags_dictionary(result.result.message, self.tags_to_ignore)
 
                 with open(os.path.join(self.tags_folder_file_path, result.custom_id + ".json"), 'w') as output_file:
                     json.dump(tags_dict, output_file, indent=4)
             except Exception as e:
                 print(e)
 
-    def create_image_tags_full_dataset(
-            self,
-            data_extraction_prompt: str,
-            tags_to_ignore: List = []
-    ) -> None:
+    def create_image_tags_full_dataset(self) -> None:
 
         self._make_tags_folder()
 
         print(f"{len(self.image_file_names)} tag sets to create")
-        message_batches = self._create_batches_in_anthropic(
-            data_extraction_prompt
-        )
+        message_batches = self._create_batches_in_anthropic()
 
         for batch in message_batches:
             if self._wait_for_batch_to_finish(batch):
                 self._extract_and_save_data_from_batch(
-                    batch=batch,
-                    tags_to_ignore=tags_to_ignore
+                    batch=batch
                 )
