@@ -153,9 +153,10 @@ class EmailHTMLDisplayHTMLRenderer:
 
     @staticmethod
     def _email_display_component(email: Dict) -> str:
+
         return f"""
                 <div style="height: 600px; overflow: hidden;">
-                    <img src="data:image/jpeg;base64,{email["image"]}" style="width: 100%;" />
+                    <img src="data:image/png;base64,{email["image"]}" style="width: 100%;" ></img>
                 </div>"""
 
 
