@@ -1,2 +1,0 @@
-
-Pictures from Results.ipynb 
