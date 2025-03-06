@@ -201,14 +201,14 @@ class KeywordRAGIndexCreator(BaseAnthropicPromptMixin):
     def _batch_status_not_complete(message_batch):
         return message_batch.processing_status != "ended"
 
-    @retry(wait=wait_exponential(multiplier=1, min=2, max=300),
-            stop=stop_after_attempt(5),
+    @retry(wait=wait_exponential(multiplier=2, min=2, max=300),
+            stop=stop_after_attempt(20),
            retry=retry_if_result(_batch_status_not_complete))
     def _check_batch_status(self, batch: MessageBatch) -> MessageBatch:
         message_batch = self.CLIENT.messages.batches.retrieve(batch.id)
 
         status = message_batch.processing_status
-        print(f"Batch {batch.id} status: {status}")
+        print(f"Batch {batch.id} status: {status}, {datetime.now()}")
         return message_batch
 
     def _wait_for_batch_to_finish(self, batch: MessageBatch) -> bool:
