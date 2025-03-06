@@ -9,7 +9,6 @@ A system could work well for any narrow and curated image search application. Ho
 <br>
 <br>
 <img src="https://github.com/CharlieNatoli/email_search/blob/master/assets/rge_homepage.png" alt="example site"  width="50%"/>
-<br>
 <span style="font-size: 10px;">Example email inspo site</span>
  
 
