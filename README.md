@@ -1,8 +1,4 @@
-# Keyword-based RAG for Email Marketing 
-
-
-
-## Intro
+# Keyword-based RAG for Email Marketing
 
 During my time at Klaviyo, I learned a lot about the daily workflows of ECommerce email marketers. One common workflow is to gather creative inspiration from other marketers, often through sites like [reallygoodemails.com](https://reallygoodemails.com]) or [milled.com](milled.com).
     
@@ -10,12 +6,12 @@ For this (quick) project, I wanted to test if I could build an image search tool
 
 A system could work well for any narrow and curated image search application. However, it might not scale well due to cost and requiring a specific scope. 
 
-# project contents 
+## Project contents 
 
 * jupyter notebooks: https://github.com/CharlieNatoli/email_search/tree/master/notebooks
 * underlying code: https://github.com/CharlieNatoli/email_search/tree/master/utlities
  
-## Dataset and Methods
+## Dataset and methods
 
 Dataset: ~300 example marketing mails from online blog posts about email design
 
