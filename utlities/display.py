@@ -146,7 +146,7 @@ class EmailHTMLDisplayHTMLRenderer:
     @staticmethod
     def _tags_display_component(email: Dict) -> str:
         if email.get("tags"):
-            tags =  email["tags"].replace("\n", "<br>").replace("tags:","Tags used in index:")
+            tags =  email["tags"].replace("\n", "<br>").replace("tags:","<b>Tags used in Keyword RAG:</b>")
             return f"""<div style="font-size:12px;"> {tags} </div> """
         else:
             return ""
@@ -188,9 +188,11 @@ class EmailHTMLDisplayHTMLRenderer:
         self,
         emails_from_keywords_rag: List[Dict[str,str]],
         emails_from_image_embeddings:  List[Dict[str,str]],
+        email_query:str
     ) -> str:
 
-        html_content = f"""  <div style="display: flex; flex-direction: column; gap: 20px;">   
+        html_content = f"""  <div style="display: flex; flex-direction: column; gap: 20px;">    
+        <h1>Query Used: {email_query}</h1>
             {self._emails_row_outer_div(emails_from_keywords_rag, "Emails found, Keyword RAG Search")}
             {self._emails_row_outer_div(emails_from_image_embeddings, "Emails found,  Image embeddings Search")} 
         </div> 
@@ -213,6 +215,7 @@ def display_emails_from_query(
     return EmailHTMLDisplayHTMLRenderer().display_emails_html_from_query(
         emails_from_keywords_rag=emails_from_keywords_rag,
         emails_from_image_embeddings=emails_from_image_embeddings,
+        email_query=email_query
     )
 
 
