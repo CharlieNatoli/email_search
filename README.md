@@ -7,19 +7,17 @@ For this (quick) project, I wanted to test if I could build an image search tool
 A system could work well for any narrow and curated image search application. However, it might not scale well due to cost and requiring a specific scope. 
 
 
-<table>
-<thead> 
-  </thead>
-  <tbody>
-    <tr>
- <td> <img src="https://github.com/CharlieNatoli/email_search/blob/master/assets/rge_homepage.png" alt="drawing"  /> </td>
- <td><img src="https://github.com/CharlieNatoli/email_search/blob/master/assets/rge_categories.png" alt="drawing"/> </td>
-  </tr>
-<td>Example email inspo site</td>
-<td>Example categories that a marketer might search on</td>
-    <tr>
-</tr>
-  </tbody>
+<table> 
+    <tbody>
+        <tr>    
+            <td> <img src="https://github.com/CharlieNatoli/email_search/blob/master/assets/rge_homepage.png" alt="drawing"  /> </td>
+            <td><img src="https://github.com/CharlieNatoli/email_search/blob/master/assets/rge_categories.png" alt="drawing"/> </td>
+        </tr>
+        <tr style="font-size:12px;">
+            <td>Example email inspo site</td>
+            <td>Example categories that a marketer might search on</td>
+        </tr>
+    </tbody>
 </table>
  
 
