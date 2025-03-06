@@ -13,7 +13,7 @@ A system could work well for any narrow and curated image search application. Ho
             <td> <img src="https://github.com/CharlieNatoli/email_search/blob/master/assets/rge_homepage.png" alt="drawing"  /> </td>
             <td><img src="https://github.com/CharlieNatoli/email_search/blob/master/assets/rge_categories.png" alt="drawing"/> </td>
         </tr>
-        <tr style="font-size:12px;">
+        <tr style="font-size:10px;">
             <td>Example email inspo site</td>
             <td>Example categories that a marketer might search on</td>
         </tr>
