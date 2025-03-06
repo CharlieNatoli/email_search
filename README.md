@@ -23,9 +23,11 @@ Testing: compared results for queries related to common marketing email types (s
 
 See [Notebook](https://github.com/CharlieNatoli/email_search/blob/master/notebooks/Results.ipynb).
 
-Keyword RAG generates more relevant results that CLIP-based index when asked about marketing-specific concepts that aren't immediately visible in the email (eg. "Abandoned Shopping Cart"). In contrast, both indices perform the same if the concept that is searched for is more explicitly mentioned (eg "Clearance Sale") 
+Keyword RAG generates more relevant results that CLIP-based index when asked about marketing-specific concepts that aren't immediately visible in the email (eg. "Abandoned Shopping Cart"). In contrast, both indices perform the same if the concept that is searched for is more explicitly  mentioned or visible in the email (eg "Clearance Sale") 
 
-This system could work well for a smaller, curated content library. However, creating tags for each example image might not scale well to larger datasets due to cost. 
+Overall, this system could work well for a smaller, curated content library the need to search using very domain-specific terminology. 
+
+However, creating tags for each example image might not scale well to larger datasets due to cost. Also, adding domain specificity sacrifices much of the generality of a more standard image search. 
 
 
 
@@ -33,5 +35,5 @@ This system could work well for a smaller, curated content library. However, cre
 
 - build more formal evaluation suite
 - add in reranker and/or filter irrelevant results. 
-- try other multimodal embeddings other than CLIP to see if there is a newer/better baseline. 
+- try other multimodal embeddings other than CLIP.
 - marketing-specific fine-tuning. 
