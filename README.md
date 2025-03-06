@@ -5,10 +5,8 @@
 ## Intro
 
 During my time at Klaviyo, I learned a lot about the daily workflows of ECommerce email marketers. One common workflow is to gather creative inspiration from other marketers, often through sites like [reallygoodemails.com](https://reallygoodemails.com]) or [milled.com](milled.com).
-
-Inspired by these websites, I wanted to evaluate how well standard image embeddings models work on marketing emails, and if I could create something more customized to the needs to a marketer.  
     
-For this (quick) project, I created a search method I've named Keyword RAG. This method uses a multimodal LLM to generates keywords that are more specific to the needs of an ecommerce marketer, and then uses that as the basis of a RAG index. 
+For this (quick) project, I wanted to test if I could build an image search tool specific to marketing terms. I created a search method I've named Keyword RAG. This system first uses a multimodal LLM and chain of thought reasoning to create domain specific keywords, then uses these as a basis for the search ranking. 
 
 # project contents 
 
@@ -22,7 +20,7 @@ For the sake of demonstration, I manually downloaded a dataset of roughly 300 ex
 Then, I built two image search pipelines. 
  
 1. Baseline - built off of OpenAI's CLIP.
-2. Keyword RAG - first ask a multimodal LLM to create keywords related to a more specific use case, then use those keywords to create a RAG index.  
+2. Keyword RAG, focused on generating keywords related to the type of email. 
 
 To evaluate this, I built and tested an index focused on common types of marketing emails (inspired by the categories from [really good emails](https://reallygoodemails.com/categories])).
 
