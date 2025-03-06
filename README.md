@@ -7,8 +7,7 @@ For this (quick) project, I wanted to test if I could build an image search tool
 A system could work well for any narrow and curated image search application. However, it might not scale well due to cost and requiring a specific scope. 
 <br>
 <img src="https://github.com/CharlieNatoli/email_search/blob/master/assets/rge_homepage.png" alt="example site"  width="50%"/>
-<span style="font-size:10px;">Example email inspo site </span>
-
+<span style="font-size: 10px;">Example email inspo site</span>
  
 
 ## Project contents 
