@@ -29,7 +29,7 @@ This system could work well for a smaller, curated content library. However, cre
 
 
 
-## Out of scope / future work 
+## Future work 
 
 - build more formal evaluation suite
 - reranker and/or filter irrelevant results. 
