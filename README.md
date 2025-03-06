@@ -29,9 +29,9 @@ This system could work well for a smaller, curated content library. However, cre
 
 
 
-## Future work 
+## Extensions
 
 - build more formal evaluation suite
-- reranker and/or filter irrelevant results. 
+- add in reranker and/or filter irrelevant results. 
 - try other multimodal embeddings other than CLIP to see if there is a newer/better baseline. 
 - marketing-specific fine-tuning. 
