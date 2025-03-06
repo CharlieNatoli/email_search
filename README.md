@@ -5,6 +5,8 @@ During my time at Klaviyo, I learned a lot about the daily workflows of ECommerc
 For this (quick) project, I wanted to test if I could build an image search tool specific to marketing terms. I created a search method I've named Keyword RAG. This system first uses a multimodal LLM and chain of thought reasoning to create domain specific keywords, then uses these as a basis for the search ranking. 
 
 A system could work well for any narrow and curated image search application. However, it might not scale well due to cost and requiring a specific scope. 
+
+<br>
 <br>
 <img src="https://github.com/CharlieNatoli/email_search/blob/master/assets/rge_homepage.png" alt="example site"  width="50%"/>
 <br>
