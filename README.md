@@ -10,17 +10,17 @@ A system could work well for any narrow and curated image search application. Ho
 ## Project contents 
 
 * jupyter notebooks: https://github.com/CharlieNatoli/email_search/tree/master/notebooks
-* underlying code: https://github.com/CharlieNatoli/email_search/tree/master/utlities
+* code for creating and query indices: https://github.com/CharlieNatoli/email_search/tree/master/utlities
  
 ## Dataset and methods
 
-Dataset: ~300 example marketing mails from online blog posts about email design
+Dataset: ~300 example marketing emails downloaded from blog posts.
 
 Image search indices:
 1. Baseline - built off of OpenAI's CLIP.
-2. Keyword RAG - focused on generating keywords related to the type of email. 
+2. Keyword RAG - described above. Uses Claude as a multimodal LLM. Query focuses on the specific marketing email types. 
 
-Testing: compared the two models when asking for common types of marketing emails (inspired by the categories from [really good emails](https://reallygoodemails.com/categories])).
+Testing: compared results when asking for common marketing email types (such as those from [really good emails](https://reallygoodemails.com/categories])).
 
 ## Results 
 
@@ -30,9 +30,10 @@ Keyword RAG generates more relevant results that CLIP-based index when asked abo
 
 Both indices perform the same if the concept that is searched for is more explicitly mentioned (eg "Clearance Sale") 
 
-- This sytem could work well for a smaller, curated content library. (eg. really good emails). 
-- However, creating a set of tags in a multimodal model is expensive, and might not scale well to database of millions or examples. 
-- It also is a bit less generalizable, as we have to prompt the model for any set of these we want to be able to saerch on. 
+Future work:
+- This system could work well for a smaller, curated content library.
+- However, creating tags for each example image might not scale well to larger datasets due to cost. 
+- Because we 
 
 
 ## Out of scope / future work 
